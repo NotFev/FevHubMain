@@ -1,0 +1,236 @@
+-- // FevHub 2026 FINAL FORM (ULTRA AI SYSTEM) // print("=== FevHub FINAL FORM Initializing ===")
+
+local Players = game:GetService("Players") local RunService = game:GetService("RunService") local VirtualUser = game:GetService("VirtualUser") local VirtualInputManager = game:GetService("VirtualInputManager") local ReplicatedStorage = game:GetService("ReplicatedStorage") local Workspace = game:GetService("Workspace") local TweenService = game:GetService("TweenService") local TeleportService = game:GetService("TeleportService") local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+
+if getgenv().FevHubLoaded then return end getgenv().FevHubLoaded = true
+
+getgenv().FevHub = { AutoFarm = false, AutoBoss = false, AutoQuest = false, FastAttack = false, AutoSkill = false, BringMobs = false, AutoHaki = false, AutoKen = false, AutoDodge = false, AutoStats = false, AutoMastery = false, AutoChests = false, AutoSeaEvent = false, AutoServerHop = false, AutoFruitSniper = false, AutoIsland = false, SmartCombat = false, AutoBounty = false, AutoWebhook = false, NoClip = false, FarmDistance = 45 }
+
+-- Anti AFK player.Idled:Connect(function() VirtualUser:CaptureController() VirtualUser:ClickButton2(Vector2.new()) end)
+
+local function getChar() return player.Character or player.CharacterAdded:Wait() end
+
+-- ULTRA Tween Engine local function tweenTo(cf) local root = getChar():FindFirstChild("HumanoidRootPart") if not root then return end
+
+local dist = (root.Position - cf.Position).Magnitude
+local time = math.clamp(dist / 180, 0.05, 2.5)
+
+TweenService:Create(root, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = cf}):Play()
+
+end
+
+-- AI Combat Brain local function combatAI(target) local patterns = { Vector3.new(0,0,4), Vector3.new(5,0,5), Vector3.new(-5,0,5), Vector3.new(3,0,7) }
+
+local pick = patterns[math.random(1,#patterns)]
+tweenTo(target.HumanoidRootPart.CFrame * CFrame.new(pick))
+
+end
+
+-- Target System local function getTarget() local root = getChar():FindFirstChild("HumanoidRootPart") if not root then return end
+
+local best, dist = nil, math.huge
+
+for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+    local hum = enemy:FindFirstChild("Humanoid")
+    local hrp = enemy:FindFirstChild("HumanoidRootPart")
+
+    if hum and hrp and hum.Health > 0 then
+        local d = (root.Position - hrp.Position).Magnitude
+        local boss = hum.MaxHealth > 8000 or enemy.Name:lower():find("boss")
+
+        if d < dist and d <= getgenv().FevHub.FarmDistance then
+            if (getgenv().FevHub.AutoBoss and boss) or (not getgenv().FevHub.AutoBoss) then
+                best = enemy
+                dist = d
+            end
+        end
+    end
+end
+return best
+
+end
+
+-- Fast Attack Engine task.spawn(function() while task.wait(0.025) do if getgenv().FevHub.FastAttack then VirtualUser:CaptureController() VirtualUser:ClickButton1(Vector2.new()) end end end)
+
+-- Skill AI task.spawn(function() while task.wait(0.12) do if getgenv().FevHub.AutoSkill then for _, key in ipairs({"Z","X","C","V","F"}) do VirtualInputManager:SendKeyEvent(true, key, false, game) task.wait(math.random(1,4)/100) VirtualInputManager:SendKeyEvent(false, key, false, game) end end end end)
+
+-- Combat Loop task.spawn(function() while task.wait(0.07) do if not getgenv().FevHub.AutoFarm then continue end
+
+local target = getTarget()
+    if target then
+        if getgenv().FevHub.SmartCombat then
+            combatAI(target)
+        else
+            tweenTo(target.HumanoidRootPart.CFrame * CFrame.new(0,0,4))
+        end
+
+        if getgenv().FevHub.BringMobs then
+            for _, mob in ipairs(Workspace.Enemies:GetChildren()) do
+                if mob:FindFirstChild("HumanoidRootPart") then
+                    mob.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
+                end
+            end
+        end
+    end
+end
+
+end)
+
+-- Server Hop System (Smart) task.spawn(function() while task.wait(15) do if getgenv().FevHub.AutoServerHop then local data = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100")) for _, s in pairs(data.data) do if s.playing < 4 then TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end end end end end)
+
+-- Fruit Sniper spawn(function() while task.wait(1.5) do if getgenv().FevHub.AutoFruitSniper then for _, v in ipairs(Workspace:GetChildren()) do if v:IsA("Tool") and v:FindFirstChild("Handle") then tweenTo(v.Handle.CFrame) end end end end end)
+
+-- Bounty Hunter (Player Target) task.spawn(function() while task.wait(3) do if getgenv().FevHub.AutoBounty then for _, plr in ipairs(Players:GetPlayers()) do if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then tweenTo(plr.Character.HumanoidRootPart.CFrame) end end end end end)
+
+-- Webhook System (Discord Ready) local webhook = "" local function sendWebhook(msg) if webhook == "" then return end HttpService:PostAsync(webhook, HttpService:JSONEncode({content = msg})) end
+
+-- Chest Farm spawn(function() while task.wait(1) do if getgenv().FevHub.AutoChests then for _, v in ipairs(Workspace:GetDescendants()) do if v.Name:lower():find("chest") then firetouchinterest(getChar().HumanoidRootPart, v, 0) end end end end end)
+
+-- NoClip RunService.Stepped:Connect(function() if getgenv().FevHub.NoClip then for _, part in pairs(getChar():GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end end end)
+
+-- PRO PURPLE UI SYSTEM local ScreenGui = Instance.new("ScreenGui") ScreenGui.Parent = game.CoreGui ScreenGui.ResetOnSpawn = false
+
+local Main = Instance.new("Frame") Main.Size = UDim2.new(0, 560, 0, 460) Main.Position = UDim2.new(0.5, -280, 0.5, -230) Main.BackgroundColor3 = Color3.fromRGB(30, 20, 40) Main.Parent = ScreenGui Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 16)
+
+-- DRAGGING local UIS = game:GetService("UserInputService") local dragging, dragInput, dragStart, startPos
+
+Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = input.Position startPos = Main.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
+
+UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
+
+UIS.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
+
+-- TITLE local Title = Instance.new("TextLabel") Title.Size = UDim2.new(1,0,0,55) Title.BackgroundTransparency = 1 Title.Text = "FEVHUB PRO" Title.TextColor3 = Color3.fromRGB(180, 120, 255) Title.Font = Enum.Font.GothamBold Title.TextScaled = true Title.Parent = Main
+
+-- TAB SYSTEM local Tabs = Instance.new("Frame", Main) Tabs.Size = UDim2.new(0, 140, 1, -55) Tabs.Position = UDim2.new(0,0,0,55) Tabs.BackgroundColor3 = Color3.fromRGB(40, 25, 60) Instance.new("UICorner", Tabs).CornerRadius = UDim.new(0,12)
+
+local Content = Instance.new("Frame", Main) Content.Size = UDim2.new(1,-150,1,-65) Content.Position = UDim2.new(0,150,0,60) Content.BackgroundTransparency = 1
+
+local function createPage() local page = Instance.new("Frame") page.Size = UDim2.new(1,0,1,0) page.Visible = false page.Parent = Content
+
+local layout = Instance.new("UIListLayout", page)
+layout.Padding = UDim.new(0,8)
+return page
+
+end
+
+local Pages = { Farm = createPage(), Combat = createPage(), Misc = createPage() }
+
+Pages.Farm.Visible = true
+
+local function createTab(name, page) local btn = Instance.new("TextButton", Tabs) btn.Size = UDim2.new(1,0,0,45) btn.BackgroundColor3 = Color3.fromRGB(60,40,90) btn.Text = name btn.TextColor3 = Color3.fromRGB(220,200,255) btn.Font = Enum.Font.GothamSemibold btn.TextScaled = true Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
+
+btn.MouseButton1Click:Connect(function()
+    for _, p in pairs(Pages) do p.Visible = false end
+    page.Visible = true
+end)
+
+end
+
+createTab("Farm", Pages.Farm) createTab("Combat", Pages.Combat) createTab("Misc", Pages.Misc)
+
+-- TOGGLE CREATOR local function NewToggle(parent, name, key) local Btn = Instance.new("TextButton", parent) Btn.Size = UDim2.new(1,-10,0,40) Btn.BackgroundColor3 = Color3.fromRGB(55,35,85) Btn.Text = "⬜ "..name Btn.TextColor3 = Color3.fromRGB(230,220,255) Btn.Font = Enum.Font.GothamSemibold Btn.TextScaled = true Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,10)
+
+Btn.MouseButton1Click:Connect(function()
+    getgenv().FevHub[key] = not getgenv().FevHub[key]
+    Btn.BackgroundColor3 = getgenv().FevHub[key] and Color3.fromRGB(140,80,255) or Color3.fromRGB(55,35,85)
+    Btn.Text = (getgenv().FevHub[key] and "✅ " or "⬜ ")..name
+end)
+
+end
+
+-- FARM TAB NewToggle(Pages.Farm, "Auto Farm", "AutoFarm") NewToggle(Pages.Farm, "Auto Boss", "AutoBoss") NewToggle(Pages.Farm, "Auto Chest", "AutoChests") NewToggle(Pages.Farm, "Fruit Sniper", "AutoFruitSniper")
+
+-- COMBAT TAB NewToggle(Pages.Combat, "Fast Attack", "FastAttack") NewToggle(Pages.Combat, "Auto Skill", "AutoSkill") NewToggle(Pages.Combat, "Smart Combat", "SmartCombat") NewToggle(Pages.Combat, "Bring Mobs", "BringMobs")
+
+-- MISC TAB NewToggle(Pages.Misc, "Server Hop", "AutoServerHop") NewToggle(Pages.Misc, "Bounty Hunt", "AutoBounty") NewToggle(Pages.Misc, "No Clip", "NoClip")
+
+-- EXTRA PRO FEATURES
+
+-- KEYBIND (Toggle UI) local UIS = game:GetService("UserInputService") local visible = true
+
+UIS.InputBegan:Connect(function(input, gpe) if gpe then return end if input.KeyCode == Enum.KeyCode.RightControl then visible = not visible Main.Visible = visible end end)
+
+-- SIMPLE SLIDER (Farm Distance) local Slider = Instance.new("Frame", Pages.Farm) Slider.Size = UDim2.new(1,-10,0,50) Slider.BackgroundColor3 = Color3.fromRGB(55,35,85) Instance.new("UICorner", Slider).CornerRadius = UDim.new(0,10)
+
+local Label = Instance.new("TextLabel", Slider) Label.Size = UDim2.new(1,0,0,20) Label.BackgroundTransparency = 1 Label.Text = "Farm Distance: 45" Label.TextColor3 = Color3.fromRGB(230,220,255) Label.Font = Enum.Font.Gotham Label.TextScaled = true
+
+local Bar = Instance.new("Frame", Slider) Bar.Size = UDim2.new(1,-20,0,10) Bar.Position = UDim2.new(0,10,0,30) Bar.BackgroundColor3 = Color3.fromRGB(80,50,120) Instance.new("UICorner", Bar).CornerRadius = UDim.new(1,0)
+
+local Fill = Instance.new("Frame", Bar) Fill.Size = UDim2.new(0.5,0,1,0) Fill.BackgroundColor3 = Color3.fromRGB(170,100,255) Instance.new("UICorner", Fill).CornerRadius = UDim.new(1,0)
+
+Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then local pos = (input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X pos = math.clamp(pos,0,1) Fill.Size = UDim2.new(pos,0,1,0)
+
+local value = math.floor(pos * 100)
+    getgenv().FevHub.FarmDistance = value
+    Label.Text = "Farm Distance: "..value
+end
+
+end)
+
+-- SAVE CONFIG local configFile = "fevhub_config.json"
+
+local function saveConfig() writefile(configFile, game:GetService("HttpService"):JSONEncode(getgenv().FevHub)) end
+
+local function loadConfig() if isfile(configFile) then local data = game:GetService("HttpService"):JSONDecode(readfile(configFile)) for k,v in pairs(data) do getgenv().FevHub[k] = v end end end
+
+loadConfig()
+
+-- AUTO SAVE LOOP task.spawn(function() while task.wait(10) do pcall(saveConfig) end end)
+
+-- BUTTON ANIMATION (HOVER EFFECT) for _, btn in pairs(Main:GetDescendants()) do if btn:IsA("TextButton") then btn.MouseEnter:Connect(function() btn.BackgroundColor3 = btn.BackgroundColor3:Lerp(Color3.fromRGB(120,70,200),0.3) end) btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(55,35,85) end) end end
+
+-- MAX UI POLISH SYSTEM
+
+-- DROPDOWN SYSTEM local function NewDropdown(parent, title, options, callback) local Frame = Instance.new("Frame", parent) Frame.Size = UDim2.new(1,-10,0,40) Frame.BackgroundColor3 = Color3.fromRGB(55,35,85) Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,10)
+
+local Btn = Instance.new("TextButton", Frame)
+Btn.Size = UDim2.new(1,0,1,0)
+Btn.BackgroundTransparency = 1
+Btn.Text = title.." ▼"
+Btn.TextColor3 = Color3.fromRGB(230,220,255)
+Btn.Font = Enum.Font.GothamSemibold
+Btn.TextScaled = true
+
+local Open = false
+
+Btn.MouseButton1Click:Connect(function()
+    Open = not Open
+    if Open then
+        for _, opt in ipairs(options) do
+            local o = Instance.new("TextButton", Frame)
+            o.Size = UDim2.new(1,0,0,30)
+            o.Position = UDim2.new(0,0,1,0)
+            o.BackgroundColor3 = Color3.fromRGB(70,45,110)
+            o.Text = opt
+            o.TextColor3 = Color3.fromRGB(255,255,255)
+            o.Font = Enum.Font.Gotham
+            o.TextScaled = true
+            o.MouseButton1Click:Connect(function()
+                Btn.Text = title..": "..opt
+                callback(opt)
+                o:Destroy()
+            end)
+        end
+    end
+end)
+
+end
+
+-- STATS PANEL local Stats = Instance.new("TextLabel", Main) Stats.Size = UDim2.new(0,180,0,80) Stats.Position = UDim2.new(1,-190,0,5) Stats.BackgroundColor3 = Color3.fromRGB(40,25,60) Stats.TextColor3 = Color3.fromRGB(200,180,255) Stats.Font = Enum.Font.Gotham Stats.TextScaled = true Stats.Text = "Loading Stats..." Instance.new("UICorner", Stats).CornerRadius = UDim.new(0,10)
+
+-- LIVE STATS UPDATE task.spawn(function() while task.wait(1) do pcall(function() local lvl = player.Data.Level.Value local beli = player.Data.Beli.Value Stats.Text = "Lvl: "..lvl.." Beli: "..beli end) end end)
+
+-- THEME SWITCHER local Themes = { Purple = Color3.fromRGB(140,80,255), Red = Color3.fromRGB(255,80,80), Blue = Color3.fromRGB(80,160,255) }
+
+NewDropdown(Pages.Misc, "Theme", {"Purple","Red","Blue"}, function(choice) local col = Themes[choice] for _, v in pairs(Main:GetDescendants()) do if v:IsA("TextButton") then v.BackgroundColor3 = col end end end)
+
+-- MINI TELEPORT BUTTONS local TeleportFrame = Instance.new("Frame", Pages.Misc) TeleportFrame.Size = UDim2.new(1,-10,0,80) TeleportFrame.BackgroundColor3 = Color3.fromRGB(55,35,85) Instance.new("UICorner", TeleportFrame)
+
+local function tpBtn(name, pos) local b = Instance.new("TextButton", TeleportFrame) b.Size = UDim2.new(0.5,-5,0,30) b.Text = name b.Font = Enum.Font.Gotham b.TextScaled = true b.BackgroundColor3 = Color3.fromRGB(90,60,140) Instance.new("UICorner", b) b.MouseButton1Click:Connect(function() tweenTo(pos) end) end
+
+tpBtn("Island 1", CFrame.new(0,50,0)) tpBtn("Island 2", CFrame.new(1000,50,0))
+
+print("💎 FevHub MAX UI POLISH LOADED") print("All systems active: AI Combat | ServerHop | Bounty | FruitSniper | Webhook")
