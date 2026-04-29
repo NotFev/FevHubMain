@@ -1,236 +1,428 @@
--- // FevHub 2026 FINAL FORM (ULTRA AI SYSTEM) // print("=== FevHub FINAL FORM Initializing ===")
+--// FEVHub GOD MODE (Clean / Original / Modular)
 
-local Players = game:GetService("Players") local RunService = game:GetService("RunService") local VirtualUser = game:GetService("VirtualUser") local VirtualInputManager = game:GetService("VirtualInputManager") local ReplicatedStorage = game:GetService("ReplicatedStorage") local Workspace = game:GetService("Workspace") local TweenService = game:GetService("TweenService") local TeleportService = game:GetService("TeleportService") local HttpService = game:GetService("HttpService")
+--================ SERVICES =================--
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
-local player = Players.LocalPlayer
+--================ THEME =================--
+local Theme = {
+    Primary = Color3.fromRGB(150, 90, 255),
+    Dark    = Color3.fromRGB(18,18,28),
+    Light   = Color3.fromRGB(40,40,60),
+    Accent  = Color3.fromRGB(90,60,180),
+    Text    = Color3.fromRGB(255,255,255)
+}
 
-if getgenv().FevHubLoaded then return end getgenv().FevHubLoaded = true
+--================ ENGINE =================--
+local Engine = {
+    State = {},
+    Events = {},
+    Modules = {}
+}
 
-getgenv().FevHub = { AutoFarm = false, AutoBoss = false, AutoQuest = false, FastAttack = false, AutoSkill = false, BringMobs = false, AutoHaki = false, AutoKen = false, AutoDodge = false, AutoStats = false, AutoMastery = false, AutoChests = false, AutoSeaEvent = false, AutoServerHop = false, AutoFruitSniper = false, AutoIsland = false, SmartCombat = false, AutoBounty = false, AutoWebhook = false, NoClip = false, FarmDistance = 45 }
-
--- Anti AFK player.Idled:Connect(function() VirtualUser:CaptureController() VirtualUser:ClickButton2(Vector2.new()) end)
-
-local function getChar() return player.Character or player.CharacterAdded:Wait() end
-
--- ULTRA Tween Engine local function tweenTo(cf) local root = getChar():FindFirstChild("HumanoidRootPart") if not root then return end
-
-local dist = (root.Position - cf.Position).Magnitude
-local time = math.clamp(dist / 180, 0.05, 2.5)
-
-TweenService:Create(root, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = cf}):Play()
-
+function Engine:On(evt, fn)
+    self.Events[evt] = self.Events[evt] or {}
+    table.insert(self.Events[evt], fn)
 end
 
--- AI Combat Brain local function combatAI(target) local patterns = { Vector3.new(0,0,4), Vector3.new(5,0,5), Vector3.new(-5,0,5), Vector3.new(3,0,7) }
-
-local pick = patterns[math.random(1,#patterns)]
-tweenTo(target.HumanoidRootPart.CFrame * CFrame.new(pick))
-
+function Engine:Emit(evt, ...)
+    local list = self.Events[evt]
+    if not list then return end
+    for _, fn in ipairs(list) do
+        task.spawn(fn, ...)
+    end
 end
 
--- Target System local function getTarget() local root = getChar():FindFirstChild("HumanoidRootPart") if not root then return end
+function Engine:Set(k, v)
+    self.State[k] = v
+    self:Emit("stateChanged", k, v)
+    self:_debouncedSave()
+end
 
-local best, dist = nil, math.huge
+function Engine:Get(k) return self.State[k] end
 
-for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
-    local hum = enemy:FindFirstChild("Humanoid")
-    local hrp = enemy:FindFirstChild("HumanoidRootPart")
+--================ CONFIG =================--
+local FILE = "fevhub_clean.json"
 
-    if hum and hrp and hum.Health > 0 then
-        local d = (root.Position - hrp.Position).Magnitude
-        local boss = hum.MaxHealth > 8000 or enemy.Name:lower():find("boss")
-
-        if d < dist and d <= getgenv().FevHub.FarmDistance then
-            if (getgenv().FevHub.AutoBoss and boss) or (not getgenv().FevHub.AutoBoss) then
-                best = enemy
-                dist = d
-            end
+function Engine:Load()
+    if isfile and isfile(FILE) then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(FILE))
+        end)
+        if ok and type(data) == "table" then
+            self.State = data
         end
     end
 end
-return best
 
+function Engine:Save()
+    if writefile then
+        writefile(FILE, HttpService:JSONEncode(self.State))
+    end
 end
 
--- Fast Attack Engine task.spawn(function() while task.wait(0.025) do if getgenv().FevHub.FastAttack then VirtualUser:CaptureController() VirtualUser:ClickButton1(Vector2.new()) end end end)
-
--- Skill AI task.spawn(function() while task.wait(0.12) do if getgenv().FevHub.AutoSkill then for _, key in ipairs({"Z","X","C","V","F"}) do VirtualInputManager:SendKeyEvent(true, key, false, game) task.wait(math.random(1,4)/100) VirtualInputManager:SendKeyEvent(false, key, false, game) end end end end)
-
--- Combat Loop task.spawn(function() while task.wait(0.07) do if not getgenv().FevHub.AutoFarm then continue end
-
-local target = getTarget()
-    if target then
-        if getgenv().FevHub.SmartCombat then
-            combatAI(target)
-        else
-            tweenTo(target.HumanoidRootPart.CFrame * CFrame.new(0,0,4))
+local saveTick = 0
+function Engine:_debouncedSave()
+    saveTick += 1
+    local id = saveTick
+    task.delay(0.8, function()
+        if id == saveTick then
+            Engine:Save()
         end
+    end)
+end
 
-        if getgenv().FevHub.BringMobs then
-            for _, mob in ipairs(Workspace.Enemies:GetChildren()) do
-                if mob:FindFirstChild("HumanoidRootPart") then
-                    mob.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
+Engine:Load()
+
+--================ UI ROOT =================--
+local gui = Instance.new("ScreenGui")
+gui.Name = "FEVHubClean"
+gui.ResetOnSpawn = false
+gui.Parent = game:GetService("CoreGui")
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0.42,0,0.52,0) -- mobile-friendly
+main.Position = UDim2.new(0.5,0,0.5,0)
+main.AnchorPoint = Vector2.new(0.5,0.5)
+main.BackgroundColor3 = Theme.Dark
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+
+--================ TITLE + DRAG =================--
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1,0,0,40)
+title.Text = "FEVHub X"
+title.TextColor3 = Theme.Primary
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+
+do
+    local dragging, dragStart, startPos
+    title.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = i.Position
+            startPos = main.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local d = i.Position - dragStart
+            main.Position = startPos + UDim2.new(0, d.X, 0, d.Y)
+        end
+    end)
+    UIS.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+--================ MINIMIZE =================--
+local minimized = false
+title.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton2 then
+        minimized = not minimized
+        TweenService:Create(main, TweenInfo.new(0.25), {
+            Size = minimized and UDim2.new(0.42,0,0,40) or UDim2.new(0.42,0,0.52,0)
+        }):Play()
+    end
+end)
+
+--================ LAYOUT =================--
+local tabBar = Instance.new("Frame", main)
+tabBar.Size = UDim2.new(0,120,1,-40)
+tabBar.Position = UDim2.new(0,0,0,40)
+tabBar.BackgroundColor3 = Theme.Light
+
+local content = Instance.new("Frame", main)
+content.Size = UDim2.new(1,-120,1,-40)
+content.Position = UDim2.new(0,120,0,40)
+content.BackgroundTransparency = 1
+
+--================ EFFECTS =================--
+local function ripple(btn)
+    btn.MouseButton1Down:Connect(function(x,y)
+        local c = Instance.new("Frame", btn)
+        c.Size = UDim2.new(0,0,0,0)
+        c.Position = UDim2.new(0, x - btn.AbsolutePosition.X, 0, y - btn.AbsolutePosition.Y)
+        c.BackgroundColor3 = Color3.new(1,1,1)
+        c.BackgroundTransparency = 0.5
+        Instance.new("UICorner", c).CornerRadius = UDim.new(1,0)
+        TweenService:Create(c, TweenInfo.new(0.35), {
+            Size = UDim2.new(0,180,0,180),
+            BackgroundTransparency = 1
+        }):Play()
+        task.delay(0.35, function() c:Destroy() end)
+    end)
+end
+
+local function hover(btn)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = Theme.Primary
+        }):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = Theme.Accent
+        }):Play()
+    end)
+end
+
+--================ TABS =================--
+local tabs = {}
+
+local function createTab(name)
+    local btn = Instance.new("TextButton", tabBar)
+    btn.Size = UDim2.new(1,0,0,40)
+    btn.Text = name
+    btn.BackgroundColor3 = Theme.Accent
+    btn.TextColor3 = Theme.Text
+    ripple(btn); hover(btn)
+
+    local page = Instance.new("Frame", content)
+    page.Size = UDim2.new(1,0,1,0)
+    page.Visible = false
+    page.BackgroundTransparency = 1
+
+    local layout = Instance.new("UIListLayout", page)
+    layout.Padding = UDim.new(0,8)
+
+    btn.MouseButton1Click:Connect(function()
+        for _,p in ipairs(tabs) do p.Visible = false end
+        page.Visible = true
+    end)
+
+    table.insert(tabs, page)
+    if #tabs == 1 then page.Visible = true end
+    return page
+end
+
+--================ SECTIONS =================--
+local function createSection(parent, name)
+    local sec = Instance.new("Frame", parent)
+    sec.Size = UDim2.new(1,-10,0,130)
+    sec.BackgroundColor3 = Theme.Light
+    Instance.new("UICorner", sec).CornerRadius = UDim.new(0,10)
+
+    local t = Instance.new("TextLabel", sec)
+    t.Size = UDim2.new(1,0,0,24)
+    t.Text = name
+    t.TextColor3 = Theme.Primary
+    t.BackgroundTransparency = 1
+
+    local layout = Instance.new("UIListLayout", sec)
+    layout.Padding = UDim.new(0,6)
+    return sec
+end
+
+--================ COMPONENTS =================--
+local function createToggle(parent, label, key)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1,-10,0,30)
+    b.BackgroundColor3 = Theme.Accent
+    b.TextColor3 = Theme.Text
+    ripple(b); hover(b)
+
+    local function render(v)
+        b.Text = (v and "[ON] " or "[OFF] ") .. label
+    end
+
+    local state = Engine:Get(key) or false
+    render(state)
+
+    b.MouseButton1Click:Connect(function()
+        state = not state
+        Engine:Set(key, state)
+        Engine:Emit(key, state) -- event name == key
+        render(state)
+    end)
+end
+
+local function createSlider(parent, label, key, min, max)
+    local holder = Instance.new("Frame", parent)
+    holder.Size = UDim2.new(1,-10,0,42)
+    holder.BackgroundTransparency = 1
+
+    local txt = Instance.new("TextLabel", holder)
+    txt.Size = UDim2.new(1,0,0,18)
+    txt.BackgroundTransparency = 1
+    txt.TextColor3 = Theme.Text
+
+    local bar = Instance.new("Frame", holder)
+    bar.Size = UDim2.new(1,0,0,10)
+    bar.Position = UDim2.new(0,0,0,24)
+    bar.BackgroundColor3 = Theme.Dark
+
+    local fill = Instance.new("Frame", bar)
+    fill.BackgroundColor3 = Theme.Primary
+    fill.Size = UDim2.new(0,0,1,0)
+
+    local val = Engine:Get(key) or min
+    local function render(v)
+        local p = (v - min)/(max - min)
+        fill.Size = UDim2.new(p,0,1,0)
+        txt.Text = label .. ": " .. tostring(v)
+    end
+    render(val)
+
+    bar.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            local move; move = UIS.InputChanged:Connect(function(ii)
+                if ii.UserInputType == Enum.UserInputType.MouseMovement then
+                    local pct = math.clamp((ii.Position.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X, 0, 1)
+                    val = math.floor(min + (max-min)*pct)
+                    Engine:Set(key, val)
+                    Engine:Emit(key, val)
+                    render(val)
                 end
-            end
-        end
-    end
-end
-
-end)
-
--- Server Hop System (Smart) task.spawn(function() while task.wait(15) do if getgenv().FevHub.AutoServerHop then local data = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100")) for _, s in pairs(data.data) do if s.playing < 4 then TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end end end end end)
-
--- Fruit Sniper spawn(function() while task.wait(1.5) do if getgenv().FevHub.AutoFruitSniper then for _, v in ipairs(Workspace:GetChildren()) do if v:IsA("Tool") and v:FindFirstChild("Handle") then tweenTo(v.Handle.CFrame) end end end end end)
-
--- Bounty Hunter (Player Target) task.spawn(function() while task.wait(3) do if getgenv().FevHub.AutoBounty then for _, plr in ipairs(Players:GetPlayers()) do if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then tweenTo(plr.Character.HumanoidRootPart.CFrame) end end end end end)
-
--- Webhook System (Discord Ready) local webhook = "" local function sendWebhook(msg) if webhook == "" then return end HttpService:PostAsync(webhook, HttpService:JSONEncode({content = msg})) end
-
--- Chest Farm spawn(function() while task.wait(1) do if getgenv().FevHub.AutoChests then for _, v in ipairs(Workspace:GetDescendants()) do if v.Name:lower():find("chest") then firetouchinterest(getChar().HumanoidRootPart, v, 0) end end end end end)
-
--- NoClip RunService.Stepped:Connect(function() if getgenv().FevHub.NoClip then for _, part in pairs(getChar():GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end end end)
-
--- PRO PURPLE UI SYSTEM local ScreenGui = Instance.new("ScreenGui") ScreenGui.Parent = game.CoreGui ScreenGui.ResetOnSpawn = false
-
-local Main = Instance.new("Frame") Main.Size = UDim2.new(0, 560, 0, 460) Main.Position = UDim2.new(0.5, -280, 0.5, -230) Main.BackgroundColor3 = Color3.fromRGB(30, 20, 40) Main.Parent = ScreenGui Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 16)
-
--- DRAGGING local UIS = game:GetService("UserInputService") local dragging, dragInput, dragStart, startPos
-
-Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = input.Position startPos = Main.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
-
-UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
-
-UIS.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
-
--- TITLE local Title = Instance.new("TextLabel") Title.Size = UDim2.new(1,0,0,55) Title.BackgroundTransparency = 1 Title.Text = "FEVHUB PRO" Title.TextColor3 = Color3.fromRGB(180, 120, 255) Title.Font = Enum.Font.GothamBold Title.TextScaled = true Title.Parent = Main
-
--- TAB SYSTEM local Tabs = Instance.new("Frame", Main) Tabs.Size = UDim2.new(0, 140, 1, -55) Tabs.Position = UDim2.new(0,0,0,55) Tabs.BackgroundColor3 = Color3.fromRGB(40, 25, 60) Instance.new("UICorner", Tabs).CornerRadius = UDim.new(0,12)
-
-local Content = Instance.new("Frame", Main) Content.Size = UDim2.new(1,-150,1,-65) Content.Position = UDim2.new(0,150,0,60) Content.BackgroundTransparency = 1
-
-local function createPage() local page = Instance.new("Frame") page.Size = UDim2.new(1,0,1,0) page.Visible = false page.Parent = Content
-
-local layout = Instance.new("UIListLayout", page)
-layout.Padding = UDim.new(0,8)
-return page
-
-end
-
-local Pages = { Farm = createPage(), Combat = createPage(), Misc = createPage() }
-
-Pages.Farm.Visible = true
-
-local function createTab(name, page) local btn = Instance.new("TextButton", Tabs) btn.Size = UDim2.new(1,0,0,45) btn.BackgroundColor3 = Color3.fromRGB(60,40,90) btn.Text = name btn.TextColor3 = Color3.fromRGB(220,200,255) btn.Font = Enum.Font.GothamSemibold btn.TextScaled = true Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
-
-btn.MouseButton1Click:Connect(function()
-    for _, p in pairs(Pages) do p.Visible = false end
-    page.Visible = true
-end)
-
-end
-
-createTab("Farm", Pages.Farm) createTab("Combat", Pages.Combat) createTab("Misc", Pages.Misc)
-
--- TOGGLE CREATOR local function NewToggle(parent, name, key) local Btn = Instance.new("TextButton", parent) Btn.Size = UDim2.new(1,-10,0,40) Btn.BackgroundColor3 = Color3.fromRGB(55,35,85) Btn.Text = "⬜ "..name Btn.TextColor3 = Color3.fromRGB(230,220,255) Btn.Font = Enum.Font.GothamSemibold Btn.TextScaled = true Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,10)
-
-Btn.MouseButton1Click:Connect(function()
-    getgenv().FevHub[key] = not getgenv().FevHub[key]
-    Btn.BackgroundColor3 = getgenv().FevHub[key] and Color3.fromRGB(140,80,255) or Color3.fromRGB(55,35,85)
-    Btn.Text = (getgenv().FevHub[key] and "✅ " or "⬜ ")..name
-end)
-
-end
-
--- FARM TAB NewToggle(Pages.Farm, "Auto Farm", "AutoFarm") NewToggle(Pages.Farm, "Auto Boss", "AutoBoss") NewToggle(Pages.Farm, "Auto Chest", "AutoChests") NewToggle(Pages.Farm, "Fruit Sniper", "AutoFruitSniper")
-
--- COMBAT TAB NewToggle(Pages.Combat, "Fast Attack", "FastAttack") NewToggle(Pages.Combat, "Auto Skill", "AutoSkill") NewToggle(Pages.Combat, "Smart Combat", "SmartCombat") NewToggle(Pages.Combat, "Bring Mobs", "BringMobs")
-
--- MISC TAB NewToggle(Pages.Misc, "Server Hop", "AutoServerHop") NewToggle(Pages.Misc, "Bounty Hunt", "AutoBounty") NewToggle(Pages.Misc, "No Clip", "NoClip")
-
--- EXTRA PRO FEATURES
-
--- KEYBIND (Toggle UI) local UIS = game:GetService("UserInputService") local visible = true
-
-UIS.InputBegan:Connect(function(input, gpe) if gpe then return end if input.KeyCode == Enum.KeyCode.RightControl then visible = not visible Main.Visible = visible end end)
-
--- SIMPLE SLIDER (Farm Distance) local Slider = Instance.new("Frame", Pages.Farm) Slider.Size = UDim2.new(1,-10,0,50) Slider.BackgroundColor3 = Color3.fromRGB(55,35,85) Instance.new("UICorner", Slider).CornerRadius = UDim.new(0,10)
-
-local Label = Instance.new("TextLabel", Slider) Label.Size = UDim2.new(1,0,0,20) Label.BackgroundTransparency = 1 Label.Text = "Farm Distance: 45" Label.TextColor3 = Color3.fromRGB(230,220,255) Label.Font = Enum.Font.Gotham Label.TextScaled = true
-
-local Bar = Instance.new("Frame", Slider) Bar.Size = UDim2.new(1,-20,0,10) Bar.Position = UDim2.new(0,10,0,30) Bar.BackgroundColor3 = Color3.fromRGB(80,50,120) Instance.new("UICorner", Bar).CornerRadius = UDim.new(1,0)
-
-local Fill = Instance.new("Frame", Bar) Fill.Size = UDim2.new(0.5,0,1,0) Fill.BackgroundColor3 = Color3.fromRGB(170,100,255) Instance.new("UICorner", Fill).CornerRadius = UDim.new(1,0)
-
-Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then local pos = (input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X pos = math.clamp(pos,0,1) Fill.Size = UDim2.new(pos,0,1,0)
-
-local value = math.floor(pos * 100)
-    getgenv().FevHub.FarmDistance = value
-    Label.Text = "Farm Distance: "..value
-end
-
-end)
-
--- SAVE CONFIG local configFile = "fevhub_config.json"
-
-local function saveConfig() writefile(configFile, game:GetService("HttpService"):JSONEncode(getgenv().FevHub)) end
-
-local function loadConfig() if isfile(configFile) then local data = game:GetService("HttpService"):JSONDecode(readfile(configFile)) for k,v in pairs(data) do getgenv().FevHub[k] = v end end end
-
-loadConfig()
-
--- AUTO SAVE LOOP task.spawn(function() while task.wait(10) do pcall(saveConfig) end end)
-
--- BUTTON ANIMATION (HOVER EFFECT) for _, btn in pairs(Main:GetDescendants()) do if btn:IsA("TextButton") then btn.MouseEnter:Connect(function() btn.BackgroundColor3 = btn.BackgroundColor3:Lerp(Color3.fromRGB(120,70,200),0.3) end) btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(55,35,85) end) end end
-
--- MAX UI POLISH SYSTEM
-
--- DROPDOWN SYSTEM local function NewDropdown(parent, title, options, callback) local Frame = Instance.new("Frame", parent) Frame.Size = UDim2.new(1,-10,0,40) Frame.BackgroundColor3 = Color3.fromRGB(55,35,85) Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,10)
-
-local Btn = Instance.new("TextButton", Frame)
-Btn.Size = UDim2.new(1,0,1,0)
-Btn.BackgroundTransparency = 1
-Btn.Text = title.." ▼"
-Btn.TextColor3 = Color3.fromRGB(230,220,255)
-Btn.Font = Enum.Font.GothamSemibold
-Btn.TextScaled = true
-
-local Open = false
-
-Btn.MouseButton1Click:Connect(function()
-    Open = not Open
-    if Open then
-        for _, opt in ipairs(options) do
-            local o = Instance.new("TextButton", Frame)
-            o.Size = UDim2.new(1,0,0,30)
-            o.Position = UDim2.new(0,0,1,0)
-            o.BackgroundColor3 = Color3.fromRGB(70,45,110)
-            o.Text = opt
-            o.TextColor3 = Color3.fromRGB(255,255,255)
-            o.Font = Enum.Font.Gotham
-            o.TextScaled = true
-            o.MouseButton1Click:Connect(function()
-                Btn.Text = title..": "..opt
-                callback(opt)
-                o:Destroy()
+            end)
+            UIS.InputEnded:Connect(function()
+                if move then move:Disconnect() end
             end)
         end
-    end
-end)
-
+    end)
 end
 
--- STATS PANEL local Stats = Instance.new("TextLabel", Main) Stats.Size = UDim2.new(0,180,0,80) Stats.Position = UDim2.new(1,-190,0,5) Stats.BackgroundColor3 = Color3.fromRGB(40,25,60) Stats.TextColor3 = Color3.fromRGB(200,180,255) Stats.Font = Enum.Font.Gotham Stats.TextScaled = true Stats.Text = "Loading Stats..." Instance.new("UICorner", Stats).CornerRadius = UDim.new(0,10)
+local function createDropdown(parent, label, key, options)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1,-10,0,30)
+    b.BackgroundColor3 = Theme.Accent
+    b.TextColor3 = Theme.Text
+    ripple(b); hover(b)
 
--- LIVE STATS UPDATE task.spawn(function() while task.wait(1) do pcall(function() local lvl = player.Data.Level.Value local beli = player.Data.Beli.Value Stats.Text = "Lvl: "..lvl.." Beli: "..beli end) end end)
+    local idx = 1
+    local current = Engine:Get(key) or options[1]
+    for i,v in ipairs(options) do if v == current then idx = i break end end
 
--- THEME SWITCHER local Themes = { Purple = Color3.fromRGB(140,80,255), Red = Color3.fromRGB(255,80,80), Blue = Color3.fromRGB(80,160,255) }
+    local function render()
+        b.Text = label .. ": " .. tostring(options[idx])
+    end
+    render()
 
-NewDropdown(Pages.Misc, "Theme", {"Purple","Red","Blue"}, function(choice) local col = Themes[choice] for _, v in pairs(Main:GetDescendants()) do if v:IsA("TextButton") then v.BackgroundColor3 = col end end end)
+    b.MouseButton1Click:Connect(function()
+        idx = idx % #options + 1
+        current = options[idx]
+        Engine:Set(key, current)
+        Engine:Emit(key, current)
+        render()
+    end)
+end
 
--- MINI TELEPORT BUTTONS local TeleportFrame = Instance.new("Frame", Pages.Misc) TeleportFrame.Size = UDim2.new(1,-10,0,80) TeleportFrame.BackgroundColor3 = Color3.fromRGB(55,35,85) Instance.new("UICorner", TeleportFrame)
+--================ NOTIFY =================--
+local function notify(msg)
+    local n = Instance.new("TextLabel", gui)
+    n.Size = UDim2.new(0,220,0,40)
+    n.Position = UDim2.new(1,-230,1,-60)
+    n.BackgroundColor3 = Theme.Accent
+    n.Text = msg
+    n.TextColor3 = Theme.Text
+    Instance.new("UICorner", n).CornerRadius = UDim.new(0,10)
 
-local function tpBtn(name, pos) local b = Instance.new("TextButton", TeleportFrame) b.Size = UDim2.new(0.5,-5,0,30) b.Text = name b.Font = Enum.Font.Gotham b.TextScaled = true b.BackgroundColor3 = Color3.fromRGB(90,60,140) Instance.new("UICorner", b) b.MouseButton1Click:Connect(function() tweenTo(pos) end) end
+    TweenService:Create(n, TweenInfo.new(0.25), {
+        Position = UDim2.new(1,-230,1,-110)
+    }):Play()
 
-tpBtn("Island 1", CFrame.new(0,50,0)) tpBtn("Island 2", CFrame.new(1000,50,0))
+    task.delay(2, function()
+        if n then n:Destroy() end
+    end)
+end
 
-print("💎 FevHub MAX UI POLISH LOADED") print("All systems active: AI Combat | ServerHop | Bounty | FruitSniper | Webhook")
+--================ SIMPLE KEY GATE =================--
+local function keyGate(validKeys)
+    local box = Instance.new("TextBox", gui)
+    box.Size = UDim2.new(0,220,0,40)
+    box.Position = UDim2.new(0.5,0,0.5,0)
+    box.AnchorPoint = Vector2.new(0.5,0.5)
+    box.PlaceholderText = "Enter Key"
+    box.BackgroundColor3 = Theme.Light
+    box.TextColor3 = Theme.Text
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0,10)
+
+    local done = false
+    box.FocusLost:Connect(function()
+        if done then return end
+        if validKeys[box.Text] then
+            done = true
+            box:Destroy()
+            notify("Access granted")
+        else
+            box.Text = ""
+            notify("Invalid key")
+        end
+    end)
+
+    repeat task.wait() until done
+end
+
+--================ PLUGINS =================--
+local Plugins = {}
+
+function Plugins:Register(name, init)
+    Engine.Modules[name] = init
+end
+
+function Plugins:LoadAll()
+    for name, fn in pairs(Engine.Modules) do
+        task.spawn(function()
+            local ok, err = pcall(function() fn(Engine) end)
+            if not ok then warn("Plugin error:", name, err) end
+        end)
+    end
+end
+
+--================ SAFE EXAMPLE PLUGINS =================--
+
+-- Theme toggle (dark/alt)
+Plugins:Register("ThemeToggle", function(Engine)
+    Engine:On("ui.theme", function(mode)
+        if mode == "Alt" then
+            Theme.Primary = Color3.fromRGB(90,200,255)
+            Theme.Accent  = Color3.fromRGB(30,120,180)
+        else
+            Theme.Primary = Color3.fromRGB(150, 90, 255)
+            Theme.Accent  = Color3.fromRGB(90,60,180)
+        end
+        notify("Theme: "..mode)
+    end)
+end)
+
+-- FPS cap demo (client-side setting example)
+Plugins:Register("FpsCap", function(Engine)
+    Engine:On("ui.fpscap", function(v)
+        if setfpscap then setfpscap(v) end
+        notify("FPS Cap: "..tostring(v))
+    end)
+end)
+
+-- Local settings echo (example of state usage)
+Plugins:Register("SettingsEcho", function(Engine)
+    Engine:On("ui.toggleHints", function(v)
+        notify("Hints: "..tostring(v))
+    end)
+end)
+
+--================ BUILD UI =================--
+
+-- Optional key gate (edit keys or remove if not needed)
+keyGate({
+    ["FEV-123"] = true,
+    ["PRO-999"] = true
+})
+
+local mainTab = createTab("Main")
+local settingsTab = createTab("Settings")
+
+local secMain = createSection(mainTab, "Controls")
+createToggle(secMain, "Show Hints", "ui.toggleHints")
+createSlider(secMain, "FPS Cap", "ui.fpscap", 30, 240)
+
+local secSettings = createSection(settingsTab, "Appearance")
+createDropdown(secSettings, "Theme", "ui.theme", {"Default","Alt"})
+
+--================ BOOT =================--
+Plugins:LoadAll()
+notify("FEVHub Ready")
